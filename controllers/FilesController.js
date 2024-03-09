@@ -2,6 +2,7 @@
 /* eslint-disable no-unused-vars */
 import { tmpdir } from 'os';
 import { promisify } from 'util';
+import { ObjectId } from 'mongodb';
 import { v4 as uuidv4 } from 'uuid';
 import { mkdir, writeFile } from 'fs';
 import { join as joinPath } from 'path';
@@ -124,6 +125,7 @@ export default class FilesController {
     const insertionInfo = await (
       await dbClient.filesCollection()
     ).insertOne(newFile);
+
     const fileId = insertionInfo.insertedId.toString();
     res.status(201).json({
       id: fileId,
@@ -136,5 +138,74 @@ export default class FilesController {
           ? 0
           : parentId,
     });
+  }
+
+  static async getShow(req, res) {
+    const user = await UsersController.getuser(req, res);
+    if (!user) {
+      return;
+    }
+    const reqParams = req.params;
+    const fileId = req.params.id;
+    if (!isValidId(fileId)) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    const file = await (
+      await dbClient.filesCollection()
+    ).findOne({
+      _id: new mongoDBCore.BSON.ObjectId(fileId),
+    });
+    if (!file) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    const userId = user._id.toString();
+    if (file.userId.toString() !== userId) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    res.status(200).json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
+    });
+  }
+
+  static async getIndex(req, res) {
+    const user = await UsersController.getuser(req, res);
+    if (!user) {
+      return;
+    }
+    const parentId = req.query.parentId || ROOT_FOLDER_ID;
+    const pages = Number(req.query.page) || 0;
+
+    const folder = await (
+      await dbClient.filesCollection()
+    ).findOne({
+      userId: ObjectId(user._id),
+    });
+    if (!folder || folder.type !== VALID_FILE_TYPES.folder) {
+      res.status(200).json([]);
+      return;
+    }
+    console.log('folder found');
+    const pipeline = [
+      { $match: { parentId: ObjectId(parentId) } },
+      { $skip: pages * 20 },
+      {
+        $limit: 20,
+      },
+      { $sort: { _id: -1 } },
+    ];
+
+    const files = await (
+      await (await dbClient.filesCollection()).aggregate(pipeline)
+    ).toArray();
+    console.log(files);
+    res.status(200).json(files);
   }
 }

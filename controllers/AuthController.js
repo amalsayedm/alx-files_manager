@@ -8,7 +8,7 @@ export default class AuthController {
   static async getConnect(req, res) {
     const auth = req.headers.authorization;
     if (!auth) {
-      res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
     const buff = Buffer.from(auth.replace('Basic ', ''), 'base64');
     const creds = {
@@ -22,7 +22,7 @@ export default class AuthController {
       password: sha1(creds.password),
     });
     if (!user) {
-      res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const token = uuidv4();
@@ -34,10 +34,10 @@ export default class AuthController {
   static async getDisconnect(req, res) {
     const token = req.header('X-Token');
     if (!token) {
-      res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
     const key = `auth_${token}`;
     await redisClient.del(key);
-    res.status(204).end();
+    return res.status(204).end();
   }
 }

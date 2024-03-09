@@ -34,19 +34,19 @@ export default class UsersController {
   static async getMe(req, res) {
     const token = req.header('X-Token');
     if (!token) {
-      res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
     const key = `auth_${token}`;
     const userId = await redisClient.get(key);
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
     const user = await (
       await dbClient.usersCollection()
     ).findOne({ _id: ObjectId(userId) });
     if (!user) {
-      res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
-    res.status(200).json({ email: user.email, id: userId });
+    return res.status(200).json({ email: user.email, id: userId });
   }
 }

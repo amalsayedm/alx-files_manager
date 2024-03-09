@@ -6,7 +6,7 @@ import dbClient from '../utils/db';
 
 export default class AuthController {
   static async getConnect(req, res) {
-    const auth = req.header.authorization;
+    const auth = req.headers.authorization;
     if (!auth) {
       res.status(401).json({ error: 'Unauthorized' });
     }
@@ -15,7 +15,9 @@ export default class AuthController {
       email: buff.toString('utf-8').split(':')[0],
       password: buff.toString('utf-8').split(':')[1],
     };
-    const user = await dbClient.usersCollection.findOne({
+    const user = await (
+      await dbClient.usersCollection()
+    ).findOne({
       email: creds.email,
       password: sha1(creds.password),
     });
@@ -35,7 +37,7 @@ export default class AuthController {
       res.status(401).json({ error: 'Unauthorized' });
     }
     const key = `auth_${token}`;
-    redisClient.del(key);
+    await redisClient.del(key);
     res.status(204).end();
   }
 }

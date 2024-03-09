@@ -15,8 +15,6 @@ const injectRoutes = (api) => {
   api.get('/stats', AppController.getStats);
   api.post('/users', UsersController.postNew);
   api.post('/files', FilesController.postUpload);
-
-
   api.get('/connect', AuthController.getConnect);
   api.get('/disconnect', AuthController.getDisconnect);
   api.get('/users/me', UsersController.getMe);

@@ -24,11 +24,10 @@ export default class AuthController {
     if (typeof creds.email !== 'string' || typeof creds.password !== 'string') {
       return res.status(401).send({ error: 'Unauthorized' });
     }
-    if (
-      creds.email === ''
-      || creds.password === ''
-      || creds.email === creds.password
-    ) {
+    if (creds.email.length === 0 || creds.password.length === 0) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+    if (creds.email === creds.password) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
     const user = await (
@@ -43,13 +42,20 @@ export default class AuthController {
 
     const token = uuidv4();
     const key = `auth_${token}`;
-    await redisClient.set(key, user._id.toString(), 86400);
-    return res.status(200).json({ token });
+    await redisClient.set(key, user._id.toString(), 24 * 3600);
+    return res.status(200).send({ token });
   }
 
   static async getDisconnect(req, res) {
     const token = req.header('X-Token');
     if (!token) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+    if (typeof token !== 'string') {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+    const userId = await redisClient.get(`auth_${token}`);
+    if (!userId) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
     const key = `auth_${token}`;

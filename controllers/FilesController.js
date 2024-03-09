@@ -120,5 +120,4 @@ export default class FilesController {
         : parentId,
     });
   }
-
 }

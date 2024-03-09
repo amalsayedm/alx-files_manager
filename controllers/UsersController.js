@@ -68,6 +68,4 @@ export default class UsersController {
     }
     return user;
   }
-
-
 }

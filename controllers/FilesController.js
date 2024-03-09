@@ -10,6 +10,7 @@ import { join as joinPath } from 'path';
 import { Request, Response } from 'express';
 import mongoDBCore from 'mongodb/lib/core';
 import dbClient from '../utils/db';
+import UsersController from './UsersController';
 
 const VALID_FILE_TYPES = {
   folder: 'folder',
@@ -51,7 +52,7 @@ export default class FilesController {
    * @param {Response} res The Express response object.
    */
   static async postUpload(req, res) {
-    const { user } = req;
+    const user = UsersController.getuser(req, res);
     const name = req.body ? req.body.name : null;
     const type = req.body ? req.body.type : null;
     const parentId = req.body && req.body.parentId ? req.body.parentId : ROOT_FOLDER_ID;

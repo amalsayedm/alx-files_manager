@@ -18,6 +18,19 @@ export default class AuthController {
       email: buff.toString('utf-8').split(':')[0],
       password: buff.toString('utf-8').split(':')[1],
     };
+    if (!creds.email || !creds.password) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+    if (typeof creds.email !== 'string' || typeof creds.password !== 'string') {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+    if (
+      creds.email === ''
+      || creds.password === ''
+      || creds.email === creds.password
+    ) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
     const user = await (
       await dbClient.usersCollection()
     ).findOne({

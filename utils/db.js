@@ -17,6 +17,7 @@ class DBClient {
 
     this.client = new mongodb.MongoClient(dbURL, { useUnifiedTopology: true });
     this.client.connect();
+    this.client.on('error', (err) => console.log(err));
   }
 
   /**

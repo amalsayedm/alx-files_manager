@@ -1,6 +1,6 @@
 /* eslint-disable import/no-named-as-default */
 /* eslint-disable no-unused-vars */
-import fs from 'fs';
+import fs, { stat } from 'fs';
 import { tmpdir } from 'os';
 import mime from 'mime-types';
 import { promisify } from 'util';
@@ -281,8 +281,8 @@ export default class FilesController {
     const token = req.header('X-Token');
     const key = `auth_${token}`;
     const userId = await redisClient.get(key);
-
     const fileId = req.params.id;
+
     const file = await (
       await dbClient.filesCollection()
     ).findOne({ _id: ObjectId(fileId) });
@@ -299,6 +299,10 @@ export default class FilesController {
     }
 
     if (!fs.existsSync(file.localPath)) {
+      const fileInfo = await stat(file.localPath);
+      if (!fileInfo.isFile()) {
+        return res.status(404).send({ error: 'Not found' });
+      }
       return res.status(404).send({ error: 'Not found' });
     }
 

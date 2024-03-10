@@ -299,10 +299,11 @@ export default class FilesController {
     }
 
     if (!fs.existsSync(file.localPath)) {
-      const fileInfo = await stat(file.localPath);
-      if (!fileInfo.isFile()) {
-        return res.status(404).send({ error: 'Not found' });
-      }
+      return res.status(404).send({ error: 'Not found' });
+    }
+
+    const fileInfo = await stat(file.localPath);
+    if (!fileInfo.isFile()) {
       return res.status(404).send({ error: 'Not found' });
     }
 

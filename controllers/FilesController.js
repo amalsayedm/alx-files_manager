@@ -146,6 +146,7 @@ export default class FilesController {
       return;
     }
 
+    const userId = user._id.toString();
     const fileId = req.params.id;
     if (!isValidId(fileId)) {
       res.status(404).json({ error: 'Not found' });
@@ -155,16 +156,13 @@ export default class FilesController {
       await dbClient.filesCollection()
     ).findOne({
       _id: new mongoDBCore.BSON.ObjectId(fileId),
+      userId: new mongoDBCore.BSON.ObjectId(userId),
     });
     if (!file) {
       res.status(404).json({ error: 'Not found' });
       return;
     }
-    const userId = user._id.toString();
-    if (file.userId.toString() !== userId) {
-      res.status(404).json({ error: 'Not found' });
-      return;
-    }
+
     res.status(200).json({
       id: file._id,
       userId: file.userId,

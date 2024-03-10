@@ -181,31 +181,27 @@ export default class FilesController {
       return;
     }
     const parentId = req.query.parentId || ROOT_FOLDER_ID;
-    const pages = Number(req.query.page) || 0;
-
-    const folder = await (
-      await dbClient.filesCollection()
-    ).findOne({
-      userId: ObjectId(user._id),
-    });
-    if (!folder || folder.type !== VALID_FILE_TYPES.folder) {
-      res.status(200).json([]);
-      return;
-    }
-    console.log('folder found');
+    const page = Number(req.query.page) || 0;
+    const pageSize = 20;
+    const skip = page * pageSize;
+    const userId = ObjectId(user._id);
+    const filesCollection = await dbClient.filesCollection();
+    const match = {
+      userId,
+      parentId,
+    };
     const pipeline = [
-      { $match: { parentId: ObjectId(parentId) } },
-      { $skip: pages * 20 },
       {
-        $limit: 20,
+        $match: match,
       },
-      { $sort: { _id: -1 } },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: pageSize,
+      },
     ];
-
-    const files = await (
-      await (await dbClient.filesCollection()).aggregate(pipeline)
-    ).toArray();
-    console.log(files);
+    const files = await filesCollection.aggregate(pipeline).toArray();
     res.status(200).json(files);
   }
 }

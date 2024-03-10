@@ -302,11 +302,6 @@ export default class FilesController {
       return res.status(404).send({ error: 'Not found' });
     }
 
-    const fileInfo = await stat(file.localPath);
-    if (!fileInfo.isFile()) {
-      return res.status(404).send({ error: 'Not found' });
-    }
-
     const data = await readFileAsync(file.localPath, 'utf-8');
 
     const mimeType = mime.lookup(file.name);

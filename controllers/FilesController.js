@@ -180,7 +180,7 @@ export default class FilesController {
     if (!user) {
       return;
     }
-    const parentId = req.query.parentId || ROOT_FOLDER_ID;
+    const parentId = req.query.parentId || ROOT_FOLDER_ID.toString();
     const page = Number(req.query.page) || 0;
     const pageSize = 20;
     const skip = page * pageSize;
@@ -202,6 +202,10 @@ export default class FilesController {
       },
     ];
     const files = await filesCollection.aggregate(pipeline).toArray();
-    res.status(200).json(files);
+    const newFiles = files.map((file) => {
+      const { _id, ...rest } = file;
+      return { id: _id, ...rest };
+    });
+    res.status(200).json(newFiles);
   }
 }

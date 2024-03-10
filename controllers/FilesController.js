@@ -155,8 +155,8 @@ export default class FilesController {
     const file = await (
       await dbClient.filesCollection()
     ).findOne({
-      _id: new mongoDBCore.BSON.ObjectId(fileId),
-      userId: new mongoDBCore.BSON.ObjectId(userId),
+      _id: ObjectId(fileId),
+      userId: ObjectId(userId),
     });
     if (!file) {
       res.status(404).json({ error: 'Not found' });

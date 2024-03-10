@@ -18,6 +18,7 @@ const injectRoutes = (api) => {
   api.get('/users/me', UsersController.getMe);
   api.get('/files', FilesController.getIndex);
   api.get('/files/:id', FilesController.getShow);
+  api.get('/files/:id/data', FilesController.getFile);
   api.post('/users', UsersController.postNew);
   api.post('/files', FilesController.postUpload);
   api.put('/files/:id/publish', FilesController.putPublish);

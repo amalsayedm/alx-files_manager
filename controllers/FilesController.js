@@ -148,7 +148,7 @@ export default class FilesController {
 
     const userId = user._id.toString();
     const fileId = req.params.id;
-    if (!isValidId(fileId)) {
+    if (!isValidId(fileId) || !fileId || !isValidId(userId) || !userId) {
       res.status(404).json({ error: 'Not found' });
       return;
     }

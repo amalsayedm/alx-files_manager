@@ -20,6 +20,8 @@ const injectRoutes = (api) => {
   api.get('/files/:id', FilesController.getShow);
   api.post('/users', UsersController.postNew);
   api.post('/files', FilesController.postUpload);
+  api.put('/files/:id/publish', FilesController.putPublish);
+  api.put('/files/:id/unpublish', FilesController.putUnpublish);
 
   api.all('*', (req, res, next) => {
     errorResponse(

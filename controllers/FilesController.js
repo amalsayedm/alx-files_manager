@@ -1,12 +1,11 @@
 /* eslint-disable import/no-named-as-default */
 /* eslint-disable no-unused-vars */
-import fs, { stat } from 'fs';
+import fs, { stat, realpath} from 'fs';
 import { tmpdir } from 'os';
-import mime from 'mime-types';
 import { promisify } from 'util';
 import { ObjectId } from 'mongodb';
 import { v4 as uuidv4 } from 'uuid';
-// import { mkdir, writeFile, readFile, fs } from 'fs';
+import Queue from 'bull/lib/queue';
 import { join as joinPath } from 'path';
 import { Request, Response } from 'express';
 import mongoDBCore from 'mongodb/lib/core';
@@ -24,7 +23,10 @@ const DEFAULT_ROOT_FOLDER = 'files_manager';
 const mkDirAsync = promisify(fs.mkdir);
 const writeFileAsync = promisify(fs.writeFile);
 const readFileAsync = promisify(fs.readFile);
+const statAsync = promisify(stat);
+const realpathAsync = promisify(realpath);
 const NULL_ID = Buffer.alloc(24, '0').toString('utf-8');
+const fileQueue = new Queue('thumbnail generation');
 const isValidId = (id) => {
   const size = 24;
   let i = 0;
@@ -131,6 +133,10 @@ export default class FilesController {
     ).insertOne(newFile);
 
     const fileId = insertionInfo.insertedId.toString();
+    if (type === VALID_FILE_TYPES.image) {
+      const Name = `Image thumbnail [${userId}-${fileId}]`;
+      fileQueue.add({ userId, fileId, name: Name });
+    }
     res.status(201).json({
       id: fileId,
       userId,
@@ -278,38 +284,43 @@ export default class FilesController {
   }
 
   static async getFile(req, res) {
-    const token = req.header('X-Token');
-    const key = `auth_${token}`;
-    const userId = await redisClient.get(key);
-    const fileId = req.params.id;
-
-    const file = await (
-      await dbClient.filesCollection()
-    ).findOne({ _id: ObjectId(fileId) });
-    if (!file) {
-      return res.status(404).send({ error: 'Not found' });
+    const user = await UsersController.getuser(req, res);
+    if(!user){
+      return;
     }
+    const { id } = req.params;
+    const size = req.query.size || null;
+    const userId = user ? user._id.toString() : '';
+    const fileFilter = {
+      _id: new mongoDBCore.BSON.ObjectId(isValidId(id) ? id : NULL_ID),
+    };
+    const file = await (await dbClient.filesCollection())
+      .findOne(fileFilter);
 
-    if (!file.isPublic && (!userId || userId !== file.userId.toString())) {
-      return res.status(404).send({ error: 'Not found' });
+    if (!file || (!file.isPublic && (file.userId.toString() !== userId))) {
+      res.status(404).json({ error: 'Not found' });
+      return;
     }
-
-    if (file.type === 'folder') {
-      return res.status(400).send({ error: "A folder doesn't have content" });
+    if (file.type === VALID_FILE_TYPES.folder) {
+      res.status(400).json({ error: 'A folder doesn\'t have content' });
+      return;
     }
-
-    if (!fs.existsSync(file.localPath)) {
-      return res.status(404).send({ error: 'Not found' });
+    let filePath = file.localPath;
+    if (size) {
+      filePath = `${file.localPath}_${size}`;
     }
-
-    const data = await readFileAsync(file.localPath, 'utf-8');
-
-    const mimeType = mime.lookup(file.name);
-    if (!mimeType) {
-      return res.status(404).send({ error: 'Not found' });
+    if (existsSync(filePath)) {
+      const fileInfo = await statAsync(filePath);
+      if (!fileInfo.isFile()) {
+        res.status(404).json({ error: 'Not found' });
+        return;
+      }
+    } else {
+      res.status(404).json({ error: 'Not found' });
+      return;
     }
-
-    res.setHeader('Content-Type', mimeType);
-    return res.status(200).send(data);
+    const absoluteFilePath = await realpathAsync(filePath);
+    res.setHeader('Content-Type', contentType(file.name) || 'text/plain; charset=utf-8');
+    res.status(200).sendFile(absoluteFilePath);
   }
 }

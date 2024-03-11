@@ -286,7 +286,7 @@ export default class FilesController {
 
   static async getFile(req, res) {
     const user = await UsersController.getuser_getfile(req, res);
-    const { id } = req.params;
+    const id = req.params.id;
     const size = req.query.size || null;
     const userId = user ? user._id.toString() : '';
     const fileFilter = {

@@ -71,7 +71,7 @@ export default class UsersController {
   static async getuser_getfile(req, res) {
     const token = req.header('X-Token');
     if (!token) {
-      return res.status(404).send({ error: 'Not found' });
+      return '';
     }
     const key = `auth_${token}`;
     const userId = await redisClient.get(key);

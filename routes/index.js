@@ -1,5 +1,5 @@
 // eslint-disable-next-line no-unused-vars
-import { Express } from 'express';
+import express from 'express';
 import AppController from '../controllers/AppController';
 import { APIError, errorResponse } from '../middlewares/error';
 import UsersController from '../controllers/UsersController';
@@ -8,7 +8,7 @@ import AuthController from '../controllers/AuthController';
 
 /**
  * Injects routes with their handlers
- * @param {Express} api
+ * @param {express} api
  */
 const injectRoutes = (api) => {
   api.get('/status', AppController.getStatus);
@@ -18,8 +18,11 @@ const injectRoutes = (api) => {
   api.get('/users/me', UsersController.getMe);
   api.get('/files', FilesController.getIndex);
   api.get('/files/:id', FilesController.getShow);
+  api.get('/files/:id/data', FilesController.getFile);
   api.post('/users', UsersController.postNew);
   api.post('/files', FilesController.postUpload);
+  api.put('/files/:id/publish', FilesController.putPublish);
+  api.put('/files/:id/unpublish', FilesController.putUnpublish);
 
   api.all('*', (req, res, next) => {
     errorResponse(
@@ -30,6 +33,7 @@ const injectRoutes = (api) => {
     );
   });
   api.use(errorResponse);
+  api.use(express.json());
 };
 
 export default injectRoutes;

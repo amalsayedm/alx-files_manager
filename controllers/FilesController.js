@@ -1,14 +1,17 @@
 /* eslint-disable import/no-named-as-default */
 /* eslint-disable no-unused-vars */
+import fs, { stat } from 'fs';
 import { tmpdir } from 'os';
+import mime from 'mime-types';
 import { promisify } from 'util';
 import { ObjectId } from 'mongodb';
 import { v4 as uuidv4 } from 'uuid';
-import { mkdir, writeFile } from 'fs';
+// import { mkdir, writeFile, readFile, fs } from 'fs';
 import { join as joinPath } from 'path';
 import { Request, Response } from 'express';
 import mongoDBCore from 'mongodb/lib/core';
 import dbClient from '../utils/db';
+import redisClient from '../utils/redis';
 import UsersController from './UsersController';
 
 const VALID_FILE_TYPES = {
@@ -18,8 +21,9 @@ const VALID_FILE_TYPES = {
 };
 const ROOT_FOLDER_ID = 0;
 const DEFAULT_ROOT_FOLDER = 'files_manager';
-const mkDirAsync = promisify(mkdir);
-const writeFileAsync = promisify(writeFile);
+const mkDirAsync = promisify(fs.mkdir);
+const writeFileAsync = promisify(fs.writeFile);
+const readFileAsync = promisify(fs.readFile);
 const NULL_ID = Buffer.alloc(24, '0').toString('utf-8');
 const isValidId = (id) => {
   const size = 24;
@@ -145,26 +149,24 @@ export default class FilesController {
     if (!user) {
       return;
     }
-    const reqParams = req.params;
+
+    const userId = user._id.toString();
     const fileId = req.params.id;
-    if (!isValidId(fileId)) {
+    if (!isValidId(fileId) || !fileId || !isValidId(userId) || !userId) {
       res.status(404).json({ error: 'Not found' });
       return;
     }
     const file = await (
       await dbClient.filesCollection()
     ).findOne({
-      _id: new mongoDBCore.BSON.ObjectId(fileId),
+      _id: ObjectId(fileId),
+      userId: ObjectId(userId),
     });
     if (!file) {
       res.status(404).json({ error: 'Not found' });
       return;
     }
-    const userId = user._id.toString();
-    if (file.userId.toString() !== userId) {
-      res.status(404).json({ error: 'Not found' });
-      return;
-    }
+
     res.status(200).json({
       id: file._id,
       userId: file.userId,
@@ -180,32 +182,134 @@ export default class FilesController {
     if (!user) {
       return;
     }
-    const parentId = req.query.parentId || ROOT_FOLDER_ID;
-    const pages = Number(req.query.page) || 0;
-
-    const folder = await (
-      await dbClient.filesCollection()
-    ).findOne({
-      userId: ObjectId(user._id),
+    const parentId = req.query.parentId || ROOT_FOLDER_ID.toString();
+    const page = Number(req.query.page) || 0;
+    const pageSize = 20;
+    const skip = page * pageSize;
+    const userId = ObjectId(user._id);
+    const filesCollection = await dbClient.filesCollection();
+    const match = {
+      userId,
+      parentId,
+    };
+    const pipeline = [
+      {
+        $match: match,
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: pageSize,
+      },
+    ];
+    const files = await filesCollection.aggregate(pipeline).toArray();
+    const newFiles = files.map((file) => {
+      const { _id, ...rest } = file;
+      return { id: _id, ...rest };
     });
-    if (!folder || folder.type !== VALID_FILE_TYPES.folder) {
-      res.status(200).json([]);
+    res.status(200).json(newFiles);
+  }
+
+  static async putPublish(req, res) {
+    const user = await UsersController.getuser(req, res);
+    if (!user) {
       return;
     }
-    console.log('folder found');
-    const pipeline = [
-      { $match: { parentId: ObjectId(parentId) } },
-      { $skip: pages * 20 },
-      {
-        $limit: 20,
-      },
-      { $sort: { _id: -1 } },
-    ];
+    const userId = user._id.toString();
+    const fileId = req.params.id;
+    const file = await (
+      await dbClient.filesCollection()
+    ).findOne({
+      _id: ObjectId(fileId),
+      userId: ObjectId(userId),
+    });
+    if (!file) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    await (
+      await dbClient.filesCollection()
+    ).updateOne(
+      { _id: ObjectId(fileId), userId: ObjectId(userId) },
+      { $set: { isPublic: true } },
+    );
+    res.status(200).json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: true,
+      parentId: file.parentId,
+    });
+  }
 
-    const files = await (
-      await (await dbClient.filesCollection()).aggregate(pipeline)
-    ).toArray();
-    console.log(files);
-    res.status(200).json(files);
+  static async putUnpublish(req, res) {
+    const user = await UsersController.getuser(req, res);
+    if (!user) {
+      return;
+    }
+    const userId = user._id.toString();
+    const fileId = req.params.id;
+    const file = await (
+      await dbClient.filesCollection()
+    ).findOne({
+      _id: ObjectId(fileId),
+      userId: ObjectId(userId),
+    });
+    if (!file) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    await (
+      await dbClient.filesCollection()
+    ).updateOne(
+      { _id: ObjectId(fileId), userId: ObjectId(userId) },
+      { $set: { isPublic: false } },
+    );
+    res.status(200).json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: false,
+      parentId: file.parentId,
+    });
+  }
+
+  static async getFile(req, res) {
+    const token = req.header('X-Token');
+    const key = `auth_${token}`;
+    const userId = await redisClient.get(key);
+    const fileId = req.params.id;
+
+    const file = await (
+      await dbClient.filesCollection()
+    ).findOne({ _id: ObjectId(fileId) });
+    if (!file) {
+      return res.status(404).send({ error: 'Not found' });
+    }
+
+    if (!file.isPublic && (!userId || userId !== file.userId.toString())) {
+      return res.status(404).send({ error: 'Not found' });
+    }
+
+    if (file.type === 'folder') {
+      return res.status(400).send({ error: "A folder doesn't have content" });
+    }
+
+    if (!fs.existsSync(file.localPath)) {
+      return res.status(404).send({ error: 'Not found' });
+    }
+
+    const data = await readFileAsync(file.localPath, 'utf-8');
+
+    const mimeType = mime.lookup(file.name);
+    if (!mimeType) {
+      return res.status(404).send({ error: 'Not found' });
+    }
+
+    res.setHeader('Content-Type', mimeType);
+    return res.status(200).send(data);
   }
 }

@@ -290,7 +290,7 @@ export default class FilesController {
     }
     const { id } = req.params;
     const size = req.query.size || null;
-    const userId = user ? user._id.toString() : '';
+    const userId = user._id.toString();
     const fileFilter = {
       _id: new mongoDBCore.BSON.ObjectId(isValidId(id) ? id : NULL_ID),
     };

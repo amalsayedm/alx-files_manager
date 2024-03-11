@@ -285,13 +285,10 @@ export default class FilesController {
   }
 
   static async getFile(req, res) {
-    const user = await UsersController.getuser(req, res);
-    if(!user){
-      return;
-    }
+    const user = await UsersController.getuser_getfile(req, res);
     const { id } = req.params;
     const size = req.query.size || null;
-    const userId = user._id.toString();
+    const userId = user ? user._id.toString() : '';
     const fileFilter = {
       _id: new mongoDBCore.BSON.ObjectId(isValidId(id) ? id : NULL_ID),
     };

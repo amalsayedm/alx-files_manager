@@ -182,7 +182,7 @@ export default class FilesController {
     if (!user) {
       return;
     }
-    const parentId = req.query.parentId || ROOT_FOLDER_ID.toString();
+    const parentId = req.query.parentId ? ObjectId(req.query.parentId) : '0';
     const page = Number(req.query.page) || 0;
     const pageSize = 20;
     const skip = page * pageSize;

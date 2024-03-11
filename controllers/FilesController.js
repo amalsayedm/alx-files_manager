@@ -190,7 +190,7 @@ export default class FilesController {
     const filesCollection = await dbClient.filesCollection();
     const match = {
       userId,
-      parentId: ObjectId(parentId),
+      parentId,
     };
     const pipeline = [
       {

@@ -173,7 +173,7 @@ export default class FilesController {
       name: file.name,
       type: file.type,
       isPublic: file.isPublic,
-      parentId: Number(file.parentId),
+      parentId: file.parentId === ROOT_FOLDER_ID.toString() ? 0 : file.parentId,
     });
   }
 
@@ -204,12 +204,16 @@ export default class FilesController {
       },
     ];
     const files = await filesCollection.aggregate(pipeline).toArray();
-    const newFiles = files.map((file) => ({
-      ...file,
-      id: file._id,
-      _id: undefined,
-      parentId: Number(file.parentId),
-    }));
+    const newFiles = files.map((file) => {
+      const { _id, ...rest } = file;
+      return { id: _id, ...rest };
+    });
+    newFiles.forEach((file) => {
+      if (file.parentId === ROOT_FOLDER_ID.toString()) {
+        // eslint-disable-next-line no-param-reassign
+        file.parentId = 0;
+      }
+    });
     res.status(200).json(newFiles);
   }
 

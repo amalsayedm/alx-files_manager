@@ -1,6 +1,6 @@
 /* eslint-disable import/no-named-as-default */
 /* eslint-disable no-unused-vars */
-import fs, { stat, realpath} from 'fs';
+import fs, { stat, realpath, existsSync} from 'fs';
 import { tmpdir } from 'os';
 import { promisify } from 'util';
 import { ObjectId } from 'mongodb';
@@ -9,6 +9,7 @@ import Queue from 'bull/lib/queue';
 import { join as joinPath } from 'path';
 import { Request, Response } from 'express';
 import mongoDBCore from 'mongodb/lib/core';
+import { contentType } from 'mime-types';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
 import UsersController from './UsersController';

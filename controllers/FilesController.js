@@ -173,7 +173,7 @@ export default class FilesController {
       name: file.name,
       type: file.type,
       isPublic: file.isPublic,
-      parentId: file.parentId === '0' ? 0 : file.parentId.toString(),
+      parentId: file.parentId,
     });
   }
 
@@ -204,14 +204,10 @@ export default class FilesController {
       },
     ];
     const files = await filesCollection.aggregate(pipeline).toArray();
-    const newFiles = files.map((file) => ({
-      id: file._id,
-      userId: file.userId,
-      name: file.name,
-      type: file.type,
-      isPublic: file.isPublic,
-      parentId: file.parentId === '0' ? 0 : file.parentId.toString(),
-    }));
+    const newFiles = files.map((file) => {
+      const { _id, ...rest } = file;
+      return { id: _id, ...rest };
+    });
     res.status(200).json(newFiles);
   }
 

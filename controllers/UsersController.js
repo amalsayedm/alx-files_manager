@@ -68,6 +68,8 @@ export default class UsersController {
     }
     return user;
   }
+
+  // eslint-disable-next-line camelcase
   static async getuser_getfile(req, res) {
     const token = req.header('X-Token');
     if (!token) {

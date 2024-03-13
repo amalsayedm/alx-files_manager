@@ -1,6 +1,6 @@
 /* eslint-disable import/no-named-as-default */
 /* eslint-disable no-unused-vars */
-import fs, { stat, realpath, existsSync} from 'fs';
+import fs, { stat, realpath, existsSync } from 'fs';
 import { tmpdir } from 'os';
 import { promisify } from 'util';
 import { ObjectId } from 'mongodb';
@@ -286,21 +286,20 @@ export default class FilesController {
 
   static async getFile(req, res) {
     const user = await UsersController.getuser_getfile(req, res);
-    const id = req.params.id;
+    const { id } = req.params;
     const size = req.query.size || null;
     const userId = user ? user._id.toString() : '';
     const fileFilter = {
       _id: new mongoDBCore.BSON.ObjectId(isValidId(id) ? id : NULL_ID),
     };
-    const file = await (await dbClient.filesCollection())
-      .findOne(fileFilter);
+    const file = await (await dbClient.filesCollection()).findOne(fileFilter);
 
-    if (!file || (!file.isPublic && (file.userId.toString() !== userId))) {
+    if (!file || (!file.isPublic && file.userId.toString() !== userId)) {
       res.status(404).json({ error: 'Not found' });
       return;
     }
     if (file.type === VALID_FILE_TYPES.folder) {
-      res.status(400).json({ error: 'A folder doesn\'t have content' });
+      res.status(400).json({ error: "A folder doesn't have content" });
       return;
     }
     let filePath = file.localPath;
@@ -318,7 +317,10 @@ export default class FilesController {
       return;
     }
     const absoluteFilePath = await realpathAsync(filePath);
-    res.setHeader('Content-Type', contentType(file.name) || 'text/plain; charset=utf-8');
+    res.setHeader(
+      'Content-Type',
+      contentType(file.name) || 'text/plain; charset=utf-8',
+    );
     res.status(200).sendFile(absoluteFilePath);
   }
 }
